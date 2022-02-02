@@ -1,0 +1,7 @@
+name: TF project path
+author: Pavel Snagovsky
+description: Fetches files chnaged for a PR and outputs a directory, intended for Terraform monorepos
+
+runs:
+  using: docker
+  image: Dockerfile
