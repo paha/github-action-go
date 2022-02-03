@@ -51,9 +51,9 @@ func (s *ghAction) setup() {
 	s.inputs = i
 
 	// DEBUG
-	a.Debugf("GITHUB_REPOSITORY %s\n", os.Getenv("GITHUB_REPOSITORY"))
-	a.Debugf("GITHUB_REPOSITORY_OWNER %s\n", os.Getenv("GITHUB_REPOSITORY_OWNER"))
-	a.Debugf("GITHUB_EVENT_NAME %s\n", os.Getenv("GITHUB_EVENT_NAME"))
+	a.Infof("GITHUB_REPOSITORY %s\n", os.Getenv("GITHUB_REPOSITORY"))
+	a.Infof("GITHUB_REPOSITORY_OWNER %s\n", os.Getenv("GITHUB_REPOSITORY_OWNER"))
+	a.Infof("GITHUB_EVENT_NAME %s\n", os.Getenv("GITHUB_EVENT_NAME"))
 }
 
 func (s *ghAction) getPrLabels() {
@@ -73,6 +73,7 @@ func (s *ghAction) getPrLabels() {
 func main() {
 	a := &ghAction{}
 	a.setup()
+	a.getPrLabels()
 
 	files := getChangedFiles(a)
 	a.getPrLabels()
