@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,52 +12,125 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func main() {
-	ctx := context.Background()
-	a := githubactions.New()
-	gh_token := a.GetInput("token")
-	pr, _ := strconv.Atoi(a.GetInput("pr_number"))
-	r := a.GetInput("repo")
-	a.Infof("GitHub repository: %s\n", r)
-	a.Infof("Pull request Number: %d\n", pr)
-	// repo - [user, repository]
-	repo := strings.Split(r, string(os.PathSeparator))
-	depth, _ := strconv.Atoi(a.GetInput("depth"))
-
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: gh_token})
-	gh := github.NewClient(oauth2.NewClient(ctx, ts))
-
-	files, _, err := gh.PullRequests.ListFiles(ctx, repo[0], repo[1], pr, &github.ListOptions{})
-	if err != nil {
-		fmt.Println(err)
-	}
-	a.Debugf("Files changed in this PR: %+v\n", files)
-
-	path := getPath(files, depth, a)
-	a.SetOutput("tf_path", path)
-	// set label
+type ghAction struct {
+	gh     *github.Client
+	action *githubactions.Action
+	inputs *inputs
+	pr     *github.PullRequest
 }
 
-func getPath(f []*github.CommitFile, d int, a *githubactions.Action) string {
+type inputs struct {
+	pr_number int
+	gh_user   string
+	gh_repo   string
+	depth     int
+}
+
+func (s *ghAction) setup() {
+	s.action = githubactions.New()
+
+	// collect GitHub action inputs
+	// TODO:
+	// - Validate inputs
+	// - Set inputs defaults
+	s.inputs.pr_number, _ = strconv.Atoi(s.action.GetInput("pr_number"))
+	r := strings.Split(s.action.GetInput("repo"), "/")
+	s.inputs.gh_user = r[0]
+	s.inputs.gh_repo = r[1]
+	s.inputs.depth, _ = strconv.Atoi(s.action.GetInput("depth"))
+
+	// GitHub authenticated client
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.action.GetInput("token")})
+	s.gh = github.NewClient(oauth2.NewClient(context.Background(), ts))
+
+	s.action.Infof("GitHub repository: %s\n", r)
+	s.action.Infof("Pull request Number: %d\n", s.inputs.pr_number)
+}
+
+func (s *ghAction) getPrLabels() {
+	pr, _, err := s.gh.PullRequests.Get(
+		context.Background(),
+		s.inputs.gh_user,
+		s.inputs.gh_repo,
+		s.inputs.pr_number,
+	)
+	if err != nil {
+		s.action.Fatalf("Failed getting PR object: %+v\n", err)
+	}
+	s.pr = pr
+	s.action.Debugf("PR lables: %+v\n", pr.Labels)
+}
+
+func main() {
+	a := &ghAction{}
+	a.setup()
+
+	files := getChangedFiles(a)
+	a.getPrLabels()
+	path := identifyPath(files, a)
+	// Set the path as the action output
+	// ${{ steps.STEP_ID.outputs.tf_path }}
+	a.action.SetOutput("tf_path", path)
+}
+
+func getChangedFiles(a *ghAction) []*github.CommitFile {
+	files, _, err := a.gh.PullRequests.ListFiles(
+		context.Background(),
+		a.inputs.gh_user,
+		a.inputs.gh_repo,
+		a.inputs.pr_number,
+		&github.ListOptions{},
+	)
+	if err != nil {
+		a.action.Fatalf("Failed getting PR files: %+v\n", err)
+	}
+
+	return files
+}
+
+func identifyPath(f []*github.CommitFile, a *ghAction) string {
 	var paths []string
 
 	for _, f := range f {
 		dir := filepath.Dir(*f.Filename)
+		a.action.Debugf("Validating change for %s\n", dir)
 		// Ignore files in the root of repository and files not matching desired depth
-		if dir != "." && len(strings.Split(dir, string(os.PathSeparator))) == d {
+		if dir != "." && len(strings.Split(dir, string(os.PathSeparator))) == a.inputs.depth {
 			paths = append(paths, dir)
 		}
 	}
-	n := len(paths)
-	if n < 1 {
-		a.Warningf("NO valid paths were found.")
+
+	ps := removeDuplicateValues(paths)
+	n := len(ps)
+	a.action.Infof("Valid paths under witch changes are made in this PR: %+q\n", ps)
+	switch {
+	case n == 0:
+		a.action.Warningf("NO valid paths were found.\n")
+		// Not erroring, decision can be made in the next steps of the action
 		return "undefined"
+	case n == 1:
+		// TODO: Needs to be validated against include/exclude
+		return ps[0]
+	default:
+		// TODO:
+		// - validate against include || exclude patherns provided as inputs, https://pkg.go.dev/path/filepath#Match
+		// - Check existing label?
+		// - How to determine which one to return?
+		a.action.Warningf("More then one potential project paths found.\n")
+		a.action.Warningf("Returning the first match.\n")
+		return ps[0]
 	}
-	a.Infof("Found %d changed paths.\n", n)
-	a.Infof("Paths under witch changes are made in this PR: %+q\n", paths)
+}
 
-	// Matching dir path - https://pkg.go.dev/path/filepath#Match
-	// for include input
+func removeDuplicateValues(ps []string) []string {
+	keys := make(map[string]bool)
+	res := []string{}
 
-	return paths[0]
+	for _, p := range ps {
+		if _, ok := keys[p]; !ok {
+			keys[p] = true
+			res = append(res, p)
+		}
+	}
+	return res
 }
