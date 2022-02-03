@@ -27,24 +27,33 @@ type inputs struct {
 }
 
 func (s *ghAction) setup() {
-	s.action = githubactions.New()
+	a := githubactions.New()
 
 	// collect GitHub action inputs
 	// TODO:
 	// - Validate inputs
 	// - Set inputs defaults
-	s.inputs.pr_number, _ = strconv.Atoi(s.action.GetInput("pr_number"))
-	r := strings.Split(s.action.GetInput("repo"), "/")
-	s.inputs.gh_user = r[0]
-	s.inputs.gh_repo = r[1]
-	s.inputs.depth, _ = strconv.Atoi(s.action.GetInput("depth"))
+	i := &inputs{}
+	i.pr_number, _ = strconv.Atoi(a.GetInput("pr_number"))
+	r := strings.Split(a.GetInput("repo"), "/")
+	i.gh_user = r[0]
+	i.gh_repo = r[1]
+	i.depth, _ = strconv.Atoi(a.GetInput("depth"))
 
 	// GitHub authenticated client
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.action.GetInput("token")})
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: a.GetInput("token")})
 	s.gh = github.NewClient(oauth2.NewClient(context.Background(), ts))
 
-	s.action.Infof("GitHub repository: %s\n", r)
-	s.action.Infof("Pull request Number: %d\n", s.inputs.pr_number)
+	a.Infof("GitHub repository: %s\n", r)
+	a.Infof("Pull request Number: %d\n", i.pr_number)
+
+	s.action = a
+	s.inputs = i
+
+	// DEBUG
+	a.Debugf("GITHUB_REPOSITORY %s\n", os.Getenv("GITHUB_REPOSITORY"))
+	a.Debugf("GITHUB_REPOSITORY_OWNER %s\n", os.Getenv("GITHUB_REPOSITORY_OWNER"))
+	a.Debugf("GITHUB_EVENT_NAME %s\n", os.Getenv("GITHUB_EVENT_NAME"))
 }
 
 func (s *ghAction) getPrLabels() {
