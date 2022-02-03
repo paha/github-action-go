@@ -1,0 +1,22 @@
+on:
+  pull_request:
+
+jobs:
+  terraform:
+    name: Debug
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Debug action
+        id: path
+        uses: docker://paha/github-action-tf-path:latest
+        with:
+          depth: 1
+          repo: ${{ github.repository }}
+          token: ${{ github.token }}
+          pr_number: ${{ github.event.number }}
+
+      - name: echo output
+        run: echo ${{ steps.path.outputs.tf_path }}

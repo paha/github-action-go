@@ -1,5 +1,8 @@
 # github-action-go
 
+NOTES: 
+- The event must be pull_request to fetch the PR number.
+
 ## Docker Hub
 
 Using personal account to store the container on Docker Hub.
@@ -20,4 +23,3 @@ References:
 [1]: https://github.com/sethvargo/go-githubactions
 [2]: https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action
 [3]: https://github.com/posener/goaction
-[4]: 
