@@ -5,6 +5,14 @@ NOTES:
 
 ## Example
 
+Required action inputs:
+
+| Input name | Description | Suggested value 
+| --- | --- | --- 
+| depth | Terrafrom project path depth | `1`
+| token | GitHub token |  `${{ github.token }}`
+| pr_number | GitHub PR id | `${{ github.event.number }}`
+
 ```yaml
 on:
   pull_request:
@@ -22,7 +30,6 @@ jobs:
         uses: docker://paha/github-action-tf-path:latest
         with:
           depth: 1
-          repo: ${{ github.repository }}
           token: ${{ github.token }}
           pr_number: ${{ github.event.number }}
 
