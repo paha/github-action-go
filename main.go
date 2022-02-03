@@ -28,6 +28,10 @@ type inputs struct {
 
 func (s *ghAction) setup() {
 	a := githubactions.New()
+	event := os.Getenv("GITHUB_EVENT_NAME")
+	if event != "pull_request" {
+		a.Warningf("This action is designed to wor with 'pull_request' event. Current event: %s", event)
+	}
 
 	// collect GitHub action inputs
 	// TODO:
@@ -35,7 +39,7 @@ func (s *ghAction) setup() {
 	// - Set inputs defaults
 	i := &inputs{}
 	i.pr_number, _ = strconv.Atoi(a.GetInput("pr_number"))
-	r := strings.Split(a.GetInput("repo"), "/")
+	r := strings.Split(os.Getenv("GITHUB_REPOSITORY"), "/")
 	i.gh_user = r[0]
 	i.gh_repo = r[1]
 	i.depth, _ = strconv.Atoi(a.GetInput("depth"))
@@ -49,11 +53,6 @@ func (s *ghAction) setup() {
 
 	s.action = a
 	s.inputs = i
-
-	// DEBUG
-	a.Infof("GITHUB_REPOSITORY %s\n", os.Getenv("GITHUB_REPOSITORY"))
-	a.Infof("GITHUB_REPOSITORY_OWNER %s\n", os.Getenv("GITHUB_REPOSITORY_OWNER"))
-	a.Infof("GITHUB_EVENT_NAME %s\n", os.Getenv("GITHUB_EVENT_NAME"))
 }
 
 func (s *ghAction) getPrLabels() {
@@ -103,7 +102,7 @@ func identifyPath(f []*github.CommitFile, a *ghAction) string {
 
 	for _, f := range f {
 		dir := filepath.Dir(*f.Filename)
-		a.action.Debugf("Validating change for %s\n", dir)
+		a.action.Infof("Validating change for %s\n", dir)
 		// Ignore files in the root of repository and files not matching desired depth
 		if dir != "." && len(strings.Split(dir, string(os.PathSeparator))) == a.inputs.depth {
 			paths = append(paths, dir)
