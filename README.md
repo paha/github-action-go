@@ -1,9 +1,6 @@
 # github-action-go
 
-NOTES: 
-- The event must be pull_request to fetch the PR number.
-
-## Example
+Terrafrom project path identification for Terraform monorepos. The GitHub action fetches changed files from the GitHub PR API, validates paths in order to determin what directory Terrafrom execution needs to happen.
 
 Required action inputs:
 
@@ -12,6 +9,21 @@ Required action inputs:
 | depth | Terrafrom project path depth | `1`
 | token | GitHub token |  `${{ github.token }}`
 | pr_number | GitHub PR id | `${{ github.event.number }}`
+
+Optional action inputs:
+| Input name | Description | Suggested value 
+| --- | --- | --- 
+| include | Only output paths that match the regex | `aws-*`
+| exclude | Exclude paths that match the regex | `notes-*`
+
+*Note: Only Base paths are validated.*
+
+NOTES: 
+- Action delivery options. It can be used as a normal action but using a container avoids on spending time of fetching deps and compiling. Recomended use is container delivery via: `docker://paha/github-action-tf-path`
+- The event must be `pull_request` to fetch the PR number.
+
+## Example
+
 
 ```yaml
 on:

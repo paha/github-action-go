@@ -36,6 +36,8 @@ func (s *ghAction) setup() {
 	// collect GitHub action inputs
 	i := &inputs{}
 	var err error
+	// TODO:
+	// Potentially GITHUB_REF=refs/pull/2/merge or GITHUB_REF_NAME=2/merge can be used 
 	i.pr_number, err = strconv.Atoi(a.GetInput("pr_number"))
 	if err != nil {
 		a.Errorf("Failed to get PR number: %v", err)
@@ -57,7 +59,8 @@ func (s *ghAction) setup() {
 
 	a.Infof("GitHub repository: %s", r)
 	a.Infof("Pull request Number: %d", i.pr_number)
-	// a.Infof("ENV: %+v", os.Environ())
+	// ongoing DEBUG
+	a.Infof("ENV: %+v", os.Environ())
 
 	s.action = a
 	s.inputs = i
@@ -80,13 +83,16 @@ func (s *ghAction) getPrLabels() {
 func main() {
 	a := &ghAction{}
 	a.setup()
+	a.getPrLabels()
 
 	files := getChangedFiles(a)
-	a.getPrLabels()
 	path := identifyPath(files, a)
+	a.action.Infof("Identified project path: %s", path)
 	// Set the path as the action output
 	// Example: ${{ steps.STEP_ID.outputs.tf_path }}
 	a.action.SetOutput("tf_path", path)
+
+	// TODO: manage PR label for the project path.
 }
 
 func getChangedFiles(a *ghAction) []*github.CommitFile {
@@ -107,15 +113,13 @@ func getChangedFiles(a *ghAction) []*github.CommitFile {
 func identifyPath(f []*github.CommitFile, a *ghAction) string {
 	ps := cleanDirPath(f, a)
 	a.action.Infof("Valid paths under witch changes are made in this PR: %+q", ps)
-	
+
 	switch {
 	case len(ps) == 0:
 		a.action.Warningf("NO valid paths were found.\n")
 		// Not erroring, decision can be made in the next steps of the action
 		return "undefined"
 	case len(ps) == 1:
-		// TODO: Needs to be validated against include/exclude
-		a.action.Infof("Project path: %s", ps[0])
 		return ps[0]
 	default:
 		// TODO:
@@ -124,7 +128,6 @@ func identifyPath(f []*github.CommitFile, a *ghAction) string {
 		// - How to determine which one to return?
 		a.action.Warningf("More then one potential project paths found.")
 		a.action.Warningf("Returning the first match.")
-		a.action.Infof("Project path: %s", ps[0])
 		return ps[0]
 	}
 }
