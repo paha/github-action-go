@@ -13,9 +13,10 @@ jobs:
         id: path
         uses: docker://paha/github-action-tf-path:latest
         with:
+          depth: 2
           token: ${{ github.token }}
           pr_number: ${{ github.event.number }}
-          include: "^test-project"
+          include: "^test-"
 
       - name: echo output
         run: echo ${{ steps.path.outputs.tf_path }}
