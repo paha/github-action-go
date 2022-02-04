@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -167,6 +168,7 @@ func cleanDirPath(f []*github.CommitFile, a *ghAction) []string {
 
 func matchRegex(paths []string, include, exclude string) []string {
 	if len(include) == 0 && len(exclude) == 0 {
+		fmt.Println("No regex defined, skipping matching.")
 		return paths
 	}
 
@@ -175,6 +177,7 @@ func matchRegex(paths []string, include, exclude string) []string {
 		for _, d := range paths {
 			r, _ := regexp.MatchString(include, d)
 			if r {
+				fmt.Printf("Matched include %s regex for path %s\n", include, d)
 				p = append(p, d)
 			}
 		}
@@ -185,6 +188,7 @@ func matchRegex(paths []string, include, exclude string) []string {
 		for _, d := range p {
 			e, _ := regexp.MatchString(exclude, d)
 			if !e {
+				fmt.Printf("Not matched exclude %s regex for path %s. \n", include, d)
 				px = append(px, d)
 			}
 		}
@@ -205,5 +209,6 @@ func removeDuplicateValues(ps []string) []string {
 			res = append(res, p)
 		}
 	}
+	fmt.Printf("Found and removed %d duplicates\n", len(ps)-len(res))
 	return res
 }
