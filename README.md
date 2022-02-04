@@ -1,22 +1,22 @@
 # github-action-go
 
-Terrafrom project path identification for Terraform monorepos. The GitHub action fetches changed files from the GitHub PR API, validates paths in order to determin what directory Terrafrom execution needs to happen.
+GitHub Action for Terrafrom project path identification on Terraform monorepos. The GitHub action fetches changed files from the GitHub PR API, validates paths in order to determin what directory Terrafrom execution needs to happen.
 
 Required action inputs:
 
 | Input name | Description | Suggested value 
 | --- | --- | --- 
-| depth | Terrafrom project path depth | `1`
 | token | GitHub token |  `${{ github.token }}`
 | pr_number | GitHub PR id | `${{ github.event.number }}`
 
 Optional action inputs:
-| Input name | Description | Suggested value 
-| --- | --- | --- 
-| include | Only output paths that match the regex | `aws-*`
-| exclude | Exclude paths that match the regex | `notes-*`
+| Input name | Description | Suggested value | default
+| --- | --- | --- | ---
+| include | Only output paths that match the regex | `aws-*` | None
+| exclude | Exclude paths that match the regex | `notes-*` | `^.`
+| depth | Terrafrom project path depth | `1` | `1`
 
-*Note: Only Base paths are validated.*
+___Note___: *Only base paths are validated. Validation is using https://pkg.go.dev/regexp#MatchString. Anything that startes with a `.` is not validated.
 
 NOTES: 
 - Action delivery options. It can be used as a normal action but using a container avoids on spending time of fetching deps and compiling. Recomended use is container delivery via: `docker://paha/github-action-tf-path`
@@ -41,7 +41,7 @@ jobs:
         id: path
         uses: docker://paha/github-action-tf-path:latest
         with:
-          depth: 1
+          depth: 2
           token: ${{ github.token }}
           pr_number: ${{ github.event.number }}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -24,20 +25,22 @@ type inputs struct {
 	gh_user   string
 	gh_repo   string
 	depth     int
+	include   string
+	exclude   string
 }
 
 func (s *ghAction) setup() {
 	a := githubactions.New()
 	event := os.Getenv("GITHUB_EVENT_NAME")
 	if event != "pull_request" {
-		a.Warningf("This action is designed to wor with 'pull_request' event. Current event: %s", event)
+		a.Warningf("This action is designed to work with 'pull_request' event. Current event: %s", event)
 	}
 
 	// collect GitHub action inputs
 	i := &inputs{}
 	var err error
 	// TODO:
-	// Potentially GITHUB_REF=refs/pull/2/merge or GITHUB_REF_NAME=2/merge can be used 
+	// Potentially GITHUB_REF=refs/pull/2/merge or GITHUB_REF_NAME=2/merge can be used
 	i.pr_number, err = strconv.Atoi(a.GetInput("pr_number"))
 	if err != nil {
 		a.Errorf("Failed to get PR number: %v", err)
@@ -45,13 +48,20 @@ func (s *ghAction) setup() {
 	r := strings.Split(os.Getenv("GITHUB_REPOSITORY"), "/")
 	i.gh_user = r[0]
 	i.gh_repo = r[1]
-	i.depth, err = strconv.Atoi(a.GetInput("depth"))
+	// depth is optional, if not provided set to 1
+	d := a.GetInput("depth")
+	if len(d) == 0 {
+		d = "1"
+	}
+	i.depth, err = strconv.Atoi(d)
 	if err != nil {
 		a.Errorf("Failed to get path depth: %v", err)
 	}
 	if i.depth > 4 && i.depth < 1 {
-		a.Warningf("Path depth has unreasonable value: %d", i.depth)
+		a.Warningf("Path depth has an unreasonable value: %d", i.depth)
 	}
+	i.include = a.GetInput("include")
+	i.exclude = a.GetInput("exclude")
 
 	// GitHub authenticated client
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: a.GetInput("token")})
@@ -122,10 +132,6 @@ func identifyPath(f []*github.CommitFile, a *ghAction) string {
 	case len(ps) == 1:
 		return ps[0]
 	default:
-		// TODO:
-		// - validate against include || exclude patherns provided as inputs, https://pkg.go.dev/path/filepath#Match
-		// - Check existing label?
-		// - How to determine which one to return?
 		a.action.Warningf("More then one potential project paths found.")
 		a.action.Warningf("Returning the first match.")
 		return ps[0]
@@ -138,22 +144,55 @@ func cleanDirPath(f []*github.CommitFile, a *ghAction) []string {
 	for _, f := range f {
 		dir := filepath.Dir(*f.Filename)
 		a.action.Infof("Validating change for %s", dir)
-		// Ignore files in the root of repository and directories not valid acording to the desired depth
-		if dir != "." {
+		// Ignore files in the root of repository, directories that start with a '.', and directories not valid acording to the desired depth
+		if !strings.HasPrefix(dir, ".") {
 			ds := strings.Split(dir, string(os.PathSeparator))
 			switch {
 			case len(ds) == a.inputs.depth:
 				paths = append(paths, dir)
+				a.action.Infof("Adding %s to futher validation.", dir)
 			case len(ds) < a.inputs.depth:
 				a.action.Warningf("Project path depth is longer, %s path isn't valid", dir)
 			case len(ds) > a.inputs.depth:
 				// Cut directory path to desired depth
-				paths = append(paths, strings.Join(ds[:a.inputs.depth], string(os.PathSeparator)))
+				p := strings.Join(ds[:a.inputs.depth], string(os.PathSeparator))
+				paths = append(paths, p)
+				a.action.Infof("Adding %s to futher validation. Actual change path is %s", p, ds)
 			}
 		}
 	}
 
-	return removeDuplicateValues(paths)
+	return matchRegex(removeDuplicateValues(paths), a.inputs.include, a.inputs.exclude)
+}
+
+func matchRegex(paths []string, include, exclude string) []string {
+	if len(include) == 0 && len(exclude) == 0 {
+		return paths
+	}
+
+	var p []string
+	if len(include) > 0 {
+		for _, d := range paths {
+			r, _ := regexp.MatchString(include, d)
+			if r {
+				p = append(p, d)
+			}
+		}
+	}
+
+	var px []string
+	if len(exclude) > 0 {
+		for _, d := range p {
+			e, _ := regexp.MatchString(exclude, d)
+			if !e {
+				px = append(px, d)
+			}
+		}
+	} else {
+		return p
+	}
+
+	return px
 }
 
 func removeDuplicateValues(ps []string) []string {
