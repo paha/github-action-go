@@ -7,14 +7,14 @@ Required action inputs:
 | Input name | Description | Suggested value 
 | --- | --- | --- 
 | token | GitHub token |  `${{ github.token }}`
-| pr_number | GitHub PR id | `${{ github.event.number }}`
 
 Optional action inputs:
 | Input name | Description | Suggested value | default
 | --- | --- | --- | ---
-| include | Only output paths that match the regex | `aws-*` | None
-| exclude | Exclude paths that match the regex | `notes-*` | `^.`
+| include | Only output paths that match the regex | `aws-` | None
+| exclude | Exclude paths that match the regex | `notes-` | `^.`
 | depth | Terrafrom project path depth | `1` | `1`
+| pr_number | GitHub PR id | `${{ github.event.number }}`
 
 ___Note___: *Only base paths are validated. Validation is using https://pkg.go.dev/regexp#MatchString. Anything that startes with a `.` is not validated.
 

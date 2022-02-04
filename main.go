@@ -40,11 +40,10 @@ func (s *ghAction) setup() {
 	// collect GitHub action inputs
 	i := &inputs{}
 	var err error
-	// TODO:
-	// Potentially GITHUB_REF=refs/pull/2/merge or GITHUB_REF_NAME=2/merge can be used
-	i.pr_number, err = strconv.Atoi(a.GetInput("pr_number"))
-	if err != nil {
-		a.Errorf("Failed to get PR number: %v", err)
+	i.pr_number, _ = strconv.Atoi(strings.Split(os.Getenv("GITHUB_REF_NAME"), "/")[0])
+	if i.pr_number == 0 {
+		a.Warningf("Failed to identify PR number. Trying to check inputs.")
+		i.pr_number, _ = strconv.Atoi(a.GetInput("pr_number"))
 	}
 	r := strings.Split(os.Getenv("GITHUB_REPOSITORY"), "/")
 	i.gh_user = r[0]
@@ -71,7 +70,7 @@ func (s *ghAction) setup() {
 	a.Infof("GitHub repository: %s", r)
 	a.Infof("Pull request Number: %d", i.pr_number)
 	// ongoing DEBUG
-	a.Infof("ENV: %+v", os.Environ())
+	// a.Infof("ENV: %+v", os.Environ())
 
 	s.action = a
 	s.inputs = i
