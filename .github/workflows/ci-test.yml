@@ -15,6 +15,7 @@ jobs:
         with:
           token: ${{ github.token }}
           pr_number: ${{ github.event.number }}
+          include: "^test-project"
 
       - name: echo output
         run: echo ${{ steps.path.outputs.tf_path }}
