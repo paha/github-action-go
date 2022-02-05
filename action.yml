@@ -12,19 +12,15 @@ inputs:
     required: false
   exclude:
     description: "Paths to exclude"
-    required: true
+    required: false
     default: ".github,tmp"
-  repo:
-    description: "Repository name"
-    required: true
-    default: ${{ github.repository }}
   token:
     description: "Github runner token."
     required: true
     default: ${{ github.token }}
   pr_number:
     description: "PR number"
-    required: true
+    required: false
     default: ${{ github.event.number }}
 
 outputs:
