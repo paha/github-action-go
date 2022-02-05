@@ -26,14 +26,17 @@ func main() {
 	// Example: ${{ steps.STEP_ID.outputs.tf_path }}
 	a.action.SetOutput(identifier, a.path)
 
-	currentLabel := a.getCurrentPathLabel()
-	fmt.Printf("Pull request current path label: %s\n", *currentLabel.Name)
 	label := fmt.Sprintf("%s: %s", identifier, a.path)
+	currentLabel := a.getCurrentPathLabel()
 	if currentLabel == nil {
+		fmt.Printf("No lable for path is set for the Pull request.\n")
 		a.addLabel(label)
 	} else if label != *currentLabel.Name {
+		fmt.Printf("Pull Request path label needs to be updated.\n")
 		a.rmLabel(*currentLabel.Name)
 		a.addLabel(label)
+	} else {
+		fmt.Printf("Pull Request path label is confirmed.\n")
 	}
 }
 
