@@ -76,6 +76,21 @@ func (s *ghAction) setup() {
 	s.inputs = i
 }
 
+func (s *ghAction) getChangedFiles() []*github.CommitFile {
+	files, _, err := s.gh.PullRequests.ListFiles(
+		context.Background(),
+		s.inputs.gh_user,
+		s.inputs.gh_repo,
+		s.inputs.pr_number,
+		&github.ListOptions{},
+	)
+	if err != nil {
+		s.action.Fatalf("Failed getting PR files: %+v\n", err)
+	}
+
+	return files
+}
+
 func (s *ghAction) getIssueLabels() {
 	issue, _, err := s.gh.Issues.Get(
 		context.Background(),

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,7 +18,7 @@ func main() {
 	a.setup()
 	a.getIssueLabels()
 
-	files := getChangedFiles(a.gh, a.inputs, a.action)
+	files := a.getChangedFiles()
 	a.path = identifyPath(cleanDirPath(files, a.inputs, a.action), a.action)
 	fmt.Printf("Identified project path: %s\n", a.path)
 	// Set the path as the action output
@@ -38,21 +37,6 @@ func main() {
 	} else {
 		fmt.Printf("Pull Request path label is confirmed.\n")
 	}
-}
-
-func getChangedFiles(gh *github.Client, i *inputs, a *githubactions.Action) []*github.CommitFile {
-	files, _, err := gh.PullRequests.ListFiles(
-		context.Background(),
-		i.gh_user,
-		i.gh_repo,
-		i.pr_number,
-		&github.ListOptions{},
-	)
-	if err != nil {
-		a.Fatalf("Failed getting PR files: %+v\n", err)
-	}
-
-	return files
 }
 
 func identifyPath(ps []string, a *githubactions.Action) string {
