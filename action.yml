@@ -1,8 +1,12 @@
 name: TF project path
 author: Pavel Snagovsky
-description: Fetches files chnaged for a PR and outputs a directory, intended for Terraform monorepos
+description: Fetches files changed for a PR and outputs path
 
 inputs:
+  token:
+    description: "Github runner token."
+    required: true
+    default: ${{ github.token }}
   depth:
     default: "1"
     description: "Terraform project directory depth"
@@ -13,11 +17,7 @@ inputs:
   exclude:
     description: "Paths to exclude"
     required: false
-    default: ".github,tmp"
-  token:
-    description: "Github runner token."
-    required: true
-    default: ${{ github.token }}
+    default: "^."
   pr_number:
     description: "PR number"
     required: false
